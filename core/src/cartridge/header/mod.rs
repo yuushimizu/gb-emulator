@@ -12,7 +12,7 @@ mod sgb_flag;
 mod title;
 mod version;
 
-pub use cartridge_type::{CartridgeOption, CartridgeType, MbcType};
+pub use cartridge_type::{CartridgeType, MbcType};
 pub use cgb_flag::CgbFlag;
 pub use destination::Destination;
 pub use entry_point::EntryPoint;

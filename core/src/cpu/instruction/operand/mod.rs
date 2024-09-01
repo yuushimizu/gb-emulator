@@ -9,7 +9,7 @@ pub use condition::Condition;
 pub use indirection::Indirection;
 pub use literal::LITERAL;
 pub use opcode_register::OpcodeRegister;
-pub use register::{Register, Register16};
+pub use register::Register;
 
 use crate::cpu::instruction::Context;
 

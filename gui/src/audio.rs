@@ -1,4 +1,7 @@
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{
+    traits::{DeviceTrait, HostTrait, StreamTrait},
+    Sample,
+};
 use std::sync::mpsc::{Receiver, Sender};
 
 pub struct Connection {
@@ -21,6 +24,7 @@ impl core::AudioTerminal for Connection {
 #[derive(Debug)]
 pub enum AudioError {
     NoDevice,
+    Unsupported,
     ConfigError(cpal::DefaultStreamConfigError),
     BuildStreamError(cpal::BuildStreamError),
     PlayStreamError(cpal::PlayStreamError),
@@ -57,24 +61,32 @@ impl Connection {
             sample_rate: supported_config.sample_rate(),
             frame_counter: 0,
             _stream: match supported_config.sample_format() {
+                F64 => create_stream::<f64>(device, supported_config, receiver),
                 F32 => create_stream::<f32>(device, supported_config, receiver),
+                I64 => create_stream::<i64>(device, supported_config, receiver),
+                U64 => create_stream::<u64>(device, supported_config, receiver),
+                I32 => create_stream::<i32>(device, supported_config, receiver),
+                U32 => create_stream::<u32>(device, supported_config, receiver),
                 I16 => create_stream::<i16>(device, supported_config, receiver),
                 U16 => create_stream::<u16>(device, supported_config, receiver),
+                I8 => create_stream::<i8>(device, supported_config, receiver),
+                U8 => create_stream::<u8>(device, supported_config, receiver),
+                _ => Err(AudioError::Unsupported)?,
             }?,
         })
     }
 }
 
-fn create_stream<T: cpal::Sample>(
+fn create_stream<T: cpal::FromSample<f32> + cpal::SizedSample>(
     device: cpal::Device,
     supported_config: cpal::SupportedStreamConfig,
     receiver: Receiver<core::AudioFrame>,
 ) -> Result<cpal::Stream, AudioError> {
     let channels = supported_config.channels() as usize;
     let sample_frame = move |source| {
-        cpal::Sample::from::<f32>(
-            &(source as f32 / (core::MAX_AUDIO_FRAME_VOLUME as f32 / 2.0) - 1.0),
-        )
+        // cpal::Sample::from::<f32>(
+        (source as f32 / (core::MAX_AUDIO_FRAME_VOLUME as f32 / 2.0) - 1.0).to_sample::<T>()
+        // )
     };
     let stream = device.build_output_stream(
         &supported_config.config(),
@@ -91,6 +103,7 @@ fn create_stream<T: cpal::Sample>(
             }
         },
         |_| {},
+        None,
     )?;
     stream.play()?;
     Ok(stream)
